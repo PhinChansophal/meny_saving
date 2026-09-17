@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Savings Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+         :root {
+            --navy: #0d1b3e;
+            --navy2: #132557;
+            --yellow: #ffcd00;
+            --yellow-soft: #ffe27a;
+            --white: #ffffff;
+            --gray: #8a93ad;
+            --green: #28c76f;
+            --red: #ff6767;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(180deg, #0a1530, #0d1b3e 40%, #0a1530);
+            color: var(--white);
+            min-height: 100vh;
+            padding: 24px 14px 60px;
+            overflow-x: hidden;
+        }
+        
+        .wrap {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+        
+        header h1 {
+            font-size: 1.6rem;
+            margin: 0 0 4px;
+            color: var(--yellow);
+            letter-spacing: .5px;
+        }
+        
+        header p {
+            margin: 0;
+            color: var(--gray);
+            font-size: .92rem;
+        }
+        
+        .card {
+            background: var(--navy2);
+            border: 1px solid #24356e;
+            border-radius: 16px;
+            padding: 18px 20px;
+            margin-bottom: 18px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
+        }
+        
+        .qr-card {
+            display: grid;
+            grid-template-columns: minmax(180px, 230px) 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .qr-preview {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 12px;
+            background: #fff;
+            border: 4px solid #fff;
+        }
+        
+        .qr-empty {
+            aspect-ratio: 1;
+            display: grid;
+            place-items: center;
+            padding: 18px;
+            border: 1px dashed #52649b;
+            border-radius: 12px;
+            color: var(--gray);
+            text-align: center;
+            font-size: .85rem;
+        }
+        
+        .qr-copy h2 {
+            margin: 0 0 6px;
+            color: var(--yellow-soft);
+            font-size: 1.1rem;
+        }
+        
+        .qr-copy p {
+            margin: 0 0 14px;
+            color: var(--gray);
+            font-size: .82rem;
+            line-height: 1.5;
+        }
+        
+        .qr-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .file-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .controls .group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        select,
+        input[type=number] {
+            background: #0d1b3e;
+            color: var(--white);
+            border: 1px solid #2c3f7c;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: .95rem;
+        }
+        
+        input[type=number] {
+            width: 80px;
+        }
+        
+        label.small {
+            font-size: .8rem;
+            color: var(--gray);
+        }
+        
+        .goal-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #2c3f7c;
+        }
+        
+        .goal-row .hint {
+            font-size: .75rem;
+            color: var(--gray);
+        }
+        
+        .btn {
+            background: none;
+            border: 1px solid #2c3f7c;
+            color: var(--white);
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: .8rem;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            background: #1a2c62;
+        }
+        
+        .btn:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+        
+        .reset-btn {
+            background: none;
+            border: 1px solid #3a2323;
+            color: var(--red);
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: .8rem;
+            cursor: pointer;
+        }
+        
+        .reset-btn:hover {
+            background: #2a1414;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 6px;
+        }
+        
+        .stat {
+            background: #0d1b3e;
+            border-radius: 12px;
+            padding: 12px 14px;
+            border: 1px solid #24356e;
+        }
+        
+        .stat .label {
+            font-size: .75rem;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+        
+        .stat .value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--yellow);
+            margin-top: 2px;
+        }
+        
+        .stat.green .value {
+            color: var(--green);
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: #0d1b3e;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 14px;
+            border: 1px solid #24356e;
+        }
+        
+        .progress-bar>div {
+            height: 100%;
+            background: linear-gradient(90deg, var(--yellow), var(--yellow-soft));
+            transition: width .25s ease;
+        }
+        
+        .day-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 10px;
+            max-height: 420px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        
+        .day-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #0d1b3e;
+            border: 1px solid #24356e;
+            border-radius: 10px;
+            padding: 10px 14px;
+        }
+        
+        .day-row.checked {
+            border-color: var(--green);
+            background: #0e2a20;
+        }
+        
+        .day-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .day-num {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #132557;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: .85rem;
+            color: var(--yellow-soft);
+            flex: none;
+        }
+        
+        .day-row.checked .day-num {
+            background: var(--green);
+            color: #06331e;
+        }
+        
+        .day-amt {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .day-run {
+            font-size: .75rem;
+            color: var(--gray);
+        }
+        
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 2px solid #2c3f7c;
+            background: transparent;
+            cursor: pointer;
+            flex: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--green);
+            font-size: .9rem;
+        }
+        
+        .day-row.checked .checkbox {
+            border-color: var(--green);
+            background: var(--green);
+            color: #06331e;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: .88rem;
+        }
+        
+        th,
+        td {
+            padding: 8px 6px;
+            text-align: left;
+            border-bottom: 1px solid #24356e;
+        }
+        
+        th {
+            color: var(--gray);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: .7rem;
+            letter-spacing: .4px;
+        }
+        
+        td.num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        tr.month-row {
+            cursor: pointer;
+        }
+        
+        tr.month-row:hover {
+            background: rgba(255, 255, 255, .03);
+        }
+        
+        tr.current {
+            background: rgba(255, 205, 0, .07);
+        }
+        
+        tr.current td:first-child {
+            color: var(--yellow);
+            font-weight: 700;
+        }
+        
+        .chevron {
+            display: inline-block;
+            margin-right: 6px;
+            color: var(--gray);
+            font-size: .7rem;
+            transition: transform .15s ease;
+        }
+        
+        tr.expanded .chevron {
+            transform: rotate(90deg);
+        }
+        
+        .month-detail-row td {
+            padding: 0;
+            border-bottom: 1px solid #24356e;
+        }
+        
+        .month-detail {
+            padding: 10px 4px 14px;
+        }
+        
+        .day-chip-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+            gap: 6px;
+        }
+        
+        .day-chip {
+            background: #132557;
+            border: 1px solid #24356e;
+            border-radius: 8px;
+            padding: 6px 4px;
+            text-align: center;
+            font-size: .7rem;
+            line-height: 1.3;
+        }
+        
+        .day-chip.checked {
+            background: #0e2a20;
+            border-color: var(--green);
+        }
+        
+        .day-chip .chip-day {
+            font-weight: 700;
+            color: var(--yellow-soft);
+        }
+        
+        .day-chip.checked .chip-day {
+            color: var(--green);
+        }
+        
+        .day-chip .chip-amt {
+            color: var(--gray);
+            font-size: .62rem;
+        }
+        
+        .expand-toggle-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 8px;
+        }
+        
+        .year-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px dashed #2c3f7c;
+        }
+        
+        .year-total .value {
+            font-size: 1.6rem;
+            color: var(--yellow);
+            font-weight: 800;
+        }
+        
+        .footnote {
+            font-size: .78rem;
+            color: var(--gray);
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+        
+        .loading {
+            text-align: center;
+            color: var(--gray);
+            padding: 20px;
+        }
+        
+        .export-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .year-total {
+            min-width: 0;
+            gap: 12px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #132557;
+            border: 1px solid #2c3f7c;
+            color: var(--white);
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: .85rem;
+            opacity: 0;
+            transition: opacity .25s ease;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+         ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+         ::-webkit-scrollbar-thumb {
+            background: #2c3f7c;
+            border-radius: 6px;
+        }
+        
+        @media (max-width:600px) {
+            body {
+                padding: 16px 10px 40px;
+            }
+            header {
+                margin-bottom: 16px;
+            }
+            header h1 {
+                font-size: 1.35rem;
+            }
+            header p {
+                font-size: .8rem;
+                line-height: 1.4;
+            }
+            .card {
+                padding: 14px 12px;
+                margin-bottom: 12px;
+                border-radius: 12px;
+            }
+            .qr-card {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+            .qr-preview,
+            .qr-empty {
+                width: min(100%, 260px);
+                margin: 0 auto;
+            }
+            .qr-actions>* {
+                flex: 1 1 130px;
+            }
+            .controls {
+                align-items: stretch;
+            }
+            .controls .group {
+                width: 100%;
+                gap: 6px;
+            }
+            .controls .group label {
+                flex: 0 0 auto;
+            }
+            .controls .group select {
+                flex: 1;
+                min-width: 0;
+            }
+            .export-row {
+                width: 100%;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+            .export-row .reset-btn {
+                grid-column: 1 / -1;
+            }
+            .btn,
+            .reset-btn {
+                min-height: 40px;
+                padding: 8px 10px;
+            }
+            .goal-row {
+                align-items: stretch;
+            }
+            .goal-row label {
+                width: 100%;
+            }
+            .goal-row input[type=number] {
+                width: 100%;
+                min-height: 40px;
+            }
+            .goal-row .hint {
+                width: 100%;
+                line-height: 1.4;
+            }
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .stat {
+                padding: 10px 12px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+            }
+            .stat .value {
+                font-size: 1.15rem;
+                margin-top: 0;
+                text-align: right;
+            }
+            .day-list {
+                max-height: none;
+                padding-right: 0;
+            }
+            .day-row {
+                padding: 9px 10px;
+            }
+            .day-left {
+                gap: 9px;
+                min-width: 0;
+            }
+            .day-num {
+                width: 32px;
+                height: 32px;
+            }
+            .day-amt,
+            .day-run {
+                white-space: nowrap;
+            }
+            .day-run {
+                font-size: .7rem;
+            }
+            .checkbox {
+                width: 30px;
+                height: 30px;
+            }
+            .year-header {
+                align-items: stretch !important;
+            }
+            .year-header h3 {
+                line-height: 1.35;
+            }
+            .year-header .btn {
+                width: 100%;
+            }
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+                font-size: .78rem;
+                -webkit-overflow-scrolling: touch;
+            }
+            th,
+            td {
+                padding: 8px 5px;
+            }
+            .year-total {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .year-total .value {
+                font-size: 1.35rem;
+            }
+            .footnote {
+                font-size: .72rem;
+            }
+            .toast {
+                width: calc(100% - 20px);
+                text-align: center;
+                bottom: 10px;
+            }
+        }
+        
+        @media (max-width:360px) {
+            body {
+                padding-left: 6px;
+                padding-right: 6px;
+            }
+            .card {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            header h1 {
+                font-size: 1.2rem;
+            }
+            .controls .group {
+                display: grid;
+                grid-template-columns: auto 1fr 1fr;
+            }
+            .controls .group label {
+                grid-column: 1 / -1;
+            }
+            .export-row {
+                grid-template-columns: 1fr;
+            }
+            .export-row .reset-btn {
+                grid-column: auto;
+            }
+            .day-amt {
+                font-size: .92rem;
+            }
+            .day-run {
+                font-size: .65rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <h1>💰 Daily Savings Tracker</h1>
+            <p id="ruleText">Day 1 = $2, Day 2 = $4, Day 3 = $6 … resets every month</p>
+        </header>
+
+        <div class="card qr-card">
+            <div id="qrPreviewArea" class="qr-empty">No ABA KHQR image saved yet.</div>
+            <div class="qr-copy">
+                <h2>ABA KHQR</h2>
+                <p>Keep your payment QR code on this savings screen. The image is stored only in this browser.</p>
+                <div class="qr-actions">
+                    <label class="btn" for="qrFileInput">Choose QR image</label>
+                    <input class="file-input" type="file" id="qrFileInput" accept="image/*">
+                    <button class="btn" id="removeQrBtn" type="button" hidden>Remove QR</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="controls">
+                <div class="group">
+                    <label class="small">Month</label>
+                    <select id="monthSel"></select>
+                    <select id="yearSel"></select>
+                </div>
+                <div class="export-row">
+                    <button class="btn" id="exportCsvBtn">⬇ CSV</button>
+                    <button class="btn" id="exportPdfBtn">⬇ PDF</button>
+                    <button class="reset-btn" id="resetBtn">Clear this month</button>
+                </div>
+            </div>
+
+            <div class="goal-row">
+                <label class="small">Savings goal — increase per day ($)</label>
+                <input type="number" id="baseAmt" min="0.01" step="0.01" value="2">
+                <span class="hint">e.g. $5 → day 1 = $5, day 2 = $10, day 3 = $15…</span>
+            </div>
+
+            <div class="summary-grid">
+                <div class="stat green">
+                    <div class="label">Saved this month</div>
+                    <div class="value" id="monthSaved">$0</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Possible this month</div>
+                    <div class="value" id="monthPossible">$0</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Days logged</div>
+                    <div class="value" id="daysLogged">0 / 0</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div id="progFill" style="width:0%"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div id="dayList" class="day-list">
+                <div class="loading">Loading…</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="year-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <h3 style="margin:0;color:var(--yellow-soft);font-size:1rem;">📅 Year overview — <span id="yearLabel"></span></h3>
+                <button class="btn" id="toggleAllBtn">Expand all months</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Days logged</th>
+                        <th class="num">Saved</th>
+                        <th class="num">Possible</th>
+                    </tr>
+                </thead>
+                <tbody id="yearBody"></tbody>
+            </table>
+            <div class="year-total">
+                <span>Total saved this year</span>
+                <span class="value" id="yearSaved">$0</span>
+            </div>
+            <div class="footnote" id="footnoteText"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const monthSel = document.getElementById('monthSel');
+        const yearSel = document.getElementById('yearSel');
+        const dayList = document.getElementById('dayList');
+        const resetBtn = document.getElementById('resetBtn');
+        const baseAmtInput = document.getElementById('baseAmt');
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const toastEl = document.getElementById('toast');
+        const toggleAllBtn = document.getElementById('toggleAllBtn');
+        const qrFileInput = document.getElementById('qrFileInput');
+        const qrPreviewArea = document.getElementById('qrPreviewArea');
+        const removeQrBtn = document.getElementById('removeQrBtn');
+
+        let expandedMonths = new Set();
+
+        const now = new Date();
+        MONTH_NAMES.forEach((m, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = m;
+            if (i === now.getMonth()) opt.selected = true;
+            monthSel.appendChild(opt);
+        });
+        for (let y = now.getFullYear() - 2; y <= now.getFullYear() + 3; y++) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            if (y === now.getFullYear()) opt.selected = true;
+            yearSel.appendChild(opt);
+        }
+
+        // ---------- storage (per-viewer, persists in this browser) ----------
+        const STORAGE_PREFIX = 'savingsTracker:';
+
+        function safeGet(key) {
+            try {
+                const raw = localStorage.getItem(STORAGE_PREFIX + key);
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function safeSet(key, value) {
+            try {
+                localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value));
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function renderQrImage(dataUrl) {
+            if (!dataUrl) {
+                qrPreviewArea.className = 'qr-empty';
+                qrPreviewArea.textContent = 'No ABA KHQR image saved yet.';
+                removeQrBtn.hidden = true;
+                return;
+            }
+            const image = document.createElement('img');
+            image.className = 'qr-preview';
+            image.alt = 'Saved ABA KHQR payment code';
+            image.src = dataUrl;
+            qrPreviewArea.className = '';
+            qrPreviewArea.replaceChildren(image);
+            removeQrBtn.hidden = false;
+        }
+
+        function saveQrImage(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                showToast('Please choose an image file');
+                return;
+            }
+            if (file.size > 4 * 1024 * 1024) {
+                showToast('QR image must be 4 MB or smaller');
+                return;
+            }
+            const reader = new FileReader();
+            reader.addEventListener('load', () => {
+                const dataUrl = String(reader.result);
+                if (safeSet('settings:abaQrImage', dataUrl)) {
+                    renderQrImage(dataUrl);
+                    showToast('ABA QR saved');
+                } else {
+                    showToast('Could not save the QR image');
+                }
+            });
+            reader.readAsDataURL(file);
+        }
+
+        function keyFor(year, month) {
+            return `${year}-${String(month+1).padStart(2,'0')}`;
+        }
+
+        function loadMonthData(year, month) {
+            return safeGet(keyFor(year, month)) || {};
+        }
+
+        function saveMonthData(year, month, data) {
+            safeSet(keyFor(year, month), data);
+        }
+
+        let baseAmount = safeGet('settings:baseAmount');
+        baseAmount = (typeof baseAmount === 'number' && baseAmount > 0) ? baseAmount : 2;
+        baseAmtInput.value = baseAmount;
+        renderQrImage(safeGet('settings:abaQrImage'));
+
+        function saveBaseAmount(v) {
+            baseAmount = v;
+            safeSet('settings:baseAmount', v);
+        }
+
+        // ---------- downloads capability ----------
+        let downloadsCap = null;
+        (async() => {
+            try {
+                if (window.claude && typeof window.claude.use === 'function') {
+                    downloadsCap = await window.claude.use('downloads');
+                }
+            } catch (e) {
+                downloadsCap = null;
+            }
+        })();
+
+        function saveDownload(filename, data, mimeType) {
+            if (downloadsCap) return downloadsCap.save({
+                filename,
+                data
+            });
+            const blob = data instanceof Blob ? data : new Blob([data], {
+                type: mimeType
+            });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            return Promise.resolve({
+                status: 'saved'
+            });
+        }
+
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            clearTimeout(showToast._t);
+            showToast._t = setTimeout(() => toastEl.classList.remove('show'), 2600);
+        }
+
+        // ---------- math ----------
+        function daysInMonth(year, month) {
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        function amountForDay(day) {
+            return day * baseAmount;
+        }
+
+        function possibleForMonth(year, month) {
+            const d = daysInMonth(year, month);
+            return baseAmount * (d * (d + 1) / 2);
+        }
+
+        function fmt(n) {
+            return '$' + n.toLocaleString(undefined, {
+                minimumFractionDigits: (n % 1 !== 0 ? 2 : 0),
+                maximumFractionDigits: 2
+            });
+        }
+
+        let currentData = {};
+
+        function updateRuleText() {
+            document.getElementById('ruleText').textContent =
+                `Day 1 = ${fmt(baseAmount)}, Day 2 = ${fmt(baseAmount*2)}, Day 3 = ${fmt(baseAmount*3)} … resets every month`;
+            document.getElementById('footnoteText').textContent =
+                `Each month restarts the challenge at ${fmt(baseAmount)} on day 1, going up ${fmt(baseAmount)} per day (day n = ${fmt(baseAmount)} × n). A full 31-day month tops out at ${fmt(baseAmount*31*32/2)} possible; shorter months less. Your progress is saved automatically in this browser and is only visible to you.`;
+        }
+
+        function renderMonth() {
+            const year = parseInt(yearSel.value);
+            const month = parseInt(monthSel.value);
+            const dCount = daysInMonth(year, month);
+            currentData = loadMonthData(year, month);
+
+            dayList.innerHTML = '';
+            let running = 0;
+            let saved = 0;
+            let loggedCount = 0;
+
+            for (let day = 1; day <= dCount; day++) {
+                const amt = amountForDay(day);
+                running += amt;
+                const isChecked = !!currentData[day];
+                if (isChecked) {
+                    saved += amt;
+                    loggedCount++;
+                }
+
+                const row = document.createElement('div');
+                row.className = 'day-row' + (isChecked ? ' checked' : '');
+                row.innerHTML = `
+      <div class="day-left">
+        <div class="day-num">${day}</div>
+        <div>
+          <div class="day-amt">${fmt(amt)}</div>
+          <div class="day-run">running total: ${fmt(running)}</div>
+        </div>
+      </div>
+      <div class="checkbox">${isChecked ? '✓' : ''}</div>
+    `;
+                row.querySelector('.checkbox').addEventListener('click', () => toggleDay(day));
+                dayList.appendChild(row);
+            }
+
+            const possible = possibleForMonth(year, month);
+            document.getElementById('monthSaved').textContent = fmt(saved);
+            document.getElementById('monthPossible').textContent = fmt(possible);
+            document.getElementById('daysLogged').textContent = `${loggedCount} / ${dCount}`;
+            document.getElementById('progFill').style.width = possible ? `${(saved/possible*100).toFixed(1)}%` : '0%';
+
+            updateRuleText();
+            renderYear();
+        }
+
+        function toggleDay(day) {
+            const year = parseInt(yearSel.value);
+            const month = parseInt(monthSel.value);
+            currentData[day] = !currentData[day];
+            saveMonthData(year, month, currentData);
+            renderMonth();
+        }
+
+        function buildDayChipGrid(year, month, data, dCount) {
+            let chips = '';
+            for (let day = 1; day <= dCount; day++) {
+                const amt = amountForDay(day);
+                const isChecked = !!data[day];
+                chips += `
+      <div class="day-chip${isChecked ? ' checked' : ''}">
+        <div class="chip-day">${day}</div>
+        <div class="chip-amt">${fmt(amt)}</div>
+      </div>`;
+            }
+            return `<div class="month-detail"><div class="day-chip-grid">${chips}</div></div>`;
+        }
+
+        function renderYear() {
+            const year = parseInt(yearSel.value);
+            document.getElementById('yearLabel').textContent = year;
+            const tbody = document.getElementById('yearBody');
+            tbody.innerHTML = '';
+            let yearTotal = 0;
+            const curMonth = parseInt(monthSel.value);
+
+            for (let m = 0; m < 12; m++) {
+                const data = loadMonthData(year, m);
+                const dCount = daysInMonth(year, m);
+                let saved = 0,
+                    logged = 0;
+                for (let day = 1; day <= dCount; day++) {
+                    if (data[day]) {
+                        saved += amountForDay(day);
+                        logged++;
+                    }
+                }
+                yearTotal += saved;
+                const possible = possibleForMonth(year, m);
+                const isExpanded = expandedMonths.has(m);
+
+                const tr = document.createElement('tr');
+                tr.className = 'month-row' + (m === curMonth ? ' current' : '') + (isExpanded ? ' expanded' : '');
+                tr.innerHTML = `
+      <td><span class="chevron">▶</span>${MONTH_NAMES[m]}</td>
+      <td>${logged} / ${dCount}</td>
+      <td class="num">${fmt(saved)}</td>
+      <td class="num">${fmt(possible)}</td>
+    `;
+                tr.addEventListener('click', () => {
+                    if (expandedMonths.has(m)) expandedMonths.delete(m);
+                    else expandedMonths.add(m);
+                    renderYear();
+                });
+                tbody.appendChild(tr);
+
+                if (isExpanded) {
+                    const detailTr = document.createElement('tr');
+                    detailTr.className = 'month-detail-row';
+                    const td = document.createElement('td');
+                    td.colSpan = 4;
+                    td.innerHTML = buildDayChipGrid(year, m, data, dCount);
+                    detailTr.appendChild(td);
+                    tbody.appendChild(detailTr);
+                }
+            }
+            document.getElementById('yearSaved').textContent = fmt(yearTotal);
+            toggleAllBtn.textContent = expandedMonths.size === 12 ? 'Collapse all months' : 'Expand all months';
+        }
+
+        toggleAllBtn.addEventListener('click', () => {
+            if (expandedMonths.size === 12) expandedMonths.clear();
+            else expandedMonths = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+            renderYear();
+        });
+
+        resetBtn.addEventListener('click', () => {
+            const year = parseInt(yearSel.value);
+            const month = parseInt(monthSel.value);
+            if (!confirm(`Clear all logged savings for ${MONTH_NAMES[month]} ${year}?`)) return;
+            currentData = {};
+            saveMonthData(year, month, {});
+            renderMonth();
+        });
+
+        baseAmtInput.addEventListener('change', () => {
+            let v = parseFloat(baseAmtInput.value);
+            if (isNaN(v) || v <= 0) v = 2;
+            baseAmtInput.value = v;
+            saveBaseAmount(v);
+            renderMonth();
+        });
+
+        monthSel.addEventListener('change', renderMonth);
+        yearSel.addEventListener('change', renderMonth);
+
+        qrFileInput.addEventListener('change', () => {
+            saveQrImage(qrFileInput.files[0]);
+            qrFileInput.value = '';
+        });
+
+        removeQrBtn.addEventListener('click', () => {
+            safeSet('settings:abaQrImage', null);
+            renderQrImage(null);
+            showToast('ABA QR removed');
+        });
+
+        // ---------- export: CSV ----------
+        async function exportCsv() {
+            const year = parseInt(yearSel.value);
+            const month = parseInt(monthSel.value);
+            const dCount = daysInMonth(year, month);
+            const data = loadMonthData(year, month);
+
+            let rows = [
+                ['Day', 'Amount', 'Logged', 'Running Total']
+            ];
+            let running = 0;
+            for (let day = 1; day <= dCount; day++) {
+                const amt = amountForDay(day);
+                running += amt;
+                rows.push([day, amt.toFixed(2), data[day] ? 'Yes' : 'No', running.toFixed(2)]);
+            }
+            const csv = rows.map(r => r.map(cell => {
+                const s = String(cell);
+                return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            }).join(',')).join('\n');
+
+            try {
+                const res = await saveDownload(`savings-${MONTH_NAMES[month]}-${year}.csv`, csv, 'text/csv;charset=utf-8');
+                if (res.status === 'saved') showToast('CSV saved');
+            } catch (e) {
+                if (e && e.code === 'declined') return;
+                showToast('Could not save CSV');
+            }
+        }
+
+        // ---------- export: PDF ----------
+        async function exportPdf() {
+            if (!window.jspdf) {
+                showToast('PDF library failed to load');
+                return;
+            }
+            const {
+                jsPDF
+            } = window.jspdf;
+            const year = parseInt(yearSel.value);
+            const month = parseInt(monthSel.value);
+            const dCount = daysInMonth(year, month);
+            const data = loadMonthData(year, month);
+
+            const doc = new jsPDF();
+            doc.setFontSize(16);
+            doc.text(`Daily Savings Tracker — ${MONTH_NAMES[month]} ${year}`, 14, 18);
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Goal: +${fmt(baseAmount)} per day`, 14, 25);
+
+            let saved = 0,
+                logged = 0,
+                running = 0;
+            const lines = [];
+            for (let day = 1; day <= dCount; day++) {
+                const amt = amountForDay(day);
+                running += amt;
+                const isChecked = !!data[day];
+                if (isChecked) {
+                    saved += amt;
+                    logged++;
+                }
+                lines.push({
+                    day,
+                    amt,
+                    isChecked,
+                    running
+                });
+            }
+            const possible = possibleForMonth(year, month);
+
+            doc.setTextColor(0);
+            doc.setFontSize(11);
+            doc.text(`Saved: ${fmt(saved)}   Possible: ${fmt(possible)}   Days logged: ${logged}/${dCount}`, 14, 33);
+
+            let y = 44;
+            doc.setFontSize(9);
+            doc.setTextColor(120);
+            doc.text('Day', 14, y);
+            doc.text('Amount', 40, y);
+            doc.text('Logged', 75, y);
+            doc.text('Running total', 110, y);
+            y += 5;
+            doc.setDrawColor(200);
+            doc.line(14, y, 195, y);
+            y += 5;
+
+            doc.setTextColor(30);
+            lines.forEach(l => {
+                if (y > 280) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(String(l.day), 14, y);
+                doc.text(fmt(l.amt), 40, y);
+                doc.text(l.isChecked ? 'Yes' : '-', 75, y);
+                doc.text(fmt(l.running), 110, y);
+                y += 6;
+            });
+
+            const blob = doc.output('blob');
+            try {
+                const res = await saveDownload(`savings-${MONTH_NAMES[month]}-${year}.pdf`, blob, 'application/pdf');
+                if (res.status === 'saved') showToast('PDF saved');
+            } catch (e) {
+                if (e && e.code === 'declined') return;
+                showToast('Could not save PDF');
+            }
+        }
+
+        exportCsvBtn.addEventListener('click', exportCsv);
+        exportPdfBtn.addEventListener('click', exportPdf);
+
+        renderMonth();
+    </script>
+</body>
+
+</html>
